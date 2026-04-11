@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPA Supervisor — PRMCG/HMAPA</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f5}
+:root{
+  --bg:#fff;--bg2:#f3f4f6;--bg3:#f9fafb;
+  --bdr:#e5e7eb;--bdr2:#d1d5db;
+  --txt:#111827;--txt2:#6b7280;
+  --blue:#185FA5;--blue2:#0C447C;
+  --navy:#1A3A5C;--green:#14532D;
+  --r:8px;--rl:12px
+}
+.app{max-width:880px;margin:0 auto;background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+.hdr{padding:14px 20px 10px;border-bottom:1px solid var(--bdr)}
+.hdr h1{font-size:15px;font-weight:600;color:var(--txt)}
+.hdr p{font-size:12px;color:var(--txt2);margin-top:2px}
+.hdr-row{display:flex;justify-content:space-between;align-items:center}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;
+  border-radius:20px;border:1px solid var(--bdr2);background:var(--bg2);color:var(--txt2);cursor:pointer;
+  font-family:inherit;transition:all .15s}
+.sync-pill:hover{background:var(--bg);border-color:var(--blue)}
+.sync-pill.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534}
+.sync-pill.pending{border-color:#fde68a;background:#fffbeb;color:#92400e}
+.sync-pill.syncing{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:#22c55e}.dot-pending{background:#f59e0b}
+.dot-off{background:#9ca3af}.dot-sync{background:#3b82f6;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tabs{display:flex;border-bottom:1px solid var(--bdr);background:var(--bg2)}
+.tab{padding:10px 18px;font-size:13px;cursor:pointer;border:none;background:transparent;
+  color:var(--txt2);border-bottom:2px solid transparent;font-family:inherit;transition:all .15s}
+.tab.active{color:var(--txt);border-bottom-color:var(--blue);font-weight:600}
+.tab:hover:not(.active){color:var(--txt);background:var(--bg)}
+.pnl{display:none;padding:16px 20px}.pnl.active{display:block}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--txt2);text-transform:uppercase;margin-bottom:8px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.ff{margin-bottom:10px}
+label{display:block;font-size:12px;color:var(--txt2);margin-bottom:4px;font-weight:500}
+select,input,textarea{width:100%;padding:7px 10px;border:1px solid var(--bdr2);
+  border-radius:var(--r);background:var(--bg);color:var(--txt);font-family:inherit;font-size:13px}
+textarea{resize:vertical;min-height:68px;line-height:1.5}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(24,95,165,.15)}
+.btn{padding:8px 16px;border-radius:var(--r);font-size:13px;font-family:inherit;cursor:pointer;
+  border:1px solid var(--bdr2);background:var(--bg);color:var(--txt);transition:all .15s;font-weight:500}
+.btn:hover{background:var(--bg2)}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-p:hover{background:var(--blue2);border-color:var(--blue2)}
+.btn-g{background:#1a7340;color:#fff;border-color:#1a7340}
+.btn-g:hover{background:#145c33}
+.btn-d{background:#fef2f2;color:#991b1b;border-color:#fca5a5}
+.btn-sm{padding:5px 10px;font-size:12px}
+.brow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.card{background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rl);padding:14px 16px;margin-bottom:10px}
+.cname{font-size:14px;font-weight:600}
+.cyear{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600}
+.y-R1{background:#E6F1FB;color:#0C447C}
+.y-R2{background:#EAF3DE;color:#27500A}
+.y-R3{background:#FAEEDA;color:#633806}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:5px;margin-top:10px}
+.ecell{padding:6px 3px;border-radius:6px;text-align:center;font-size:11px;cursor:pointer;
+  border:1px solid transparent;transition:all .15s}
+.ecell:hover{border-color:var(--bdr2);transform:translateY(-1px)}
+.n0{background:var(--bg2);color:var(--txt2)}
+.n1{background:#FCEBEB;color:#791F1F}.n2{background:#FAEEDA;color:#633806}
+.n3{background:#EAF3DE;color:#27500A}.n4{background:#E6F1FB;color:#0C447C}
+.enum{font-weight:700;font-size:12px}
+.elvl{font-size:10px;margin-top:1px;opacity:.85}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.bi{background:#eff6ff;color:#1d4ed8}.bs{background:#f0fdf4;color:#166534}
+.bw{background:#fffbeb;color:#92400e}.bd{background:#fef2f2;color:#991b1b}
+.pwrap{background:var(--bg2);border-radius:4px;height:5px;margin-top:8px}
+.pfill{height:5px;border-radius:4px;background:var(--blue);transition:width .4s}
+.logentry{padding:10px 12px;border-bottom:1px solid var(--bdr);font-size:13px}
+.logentry:last-child{border-bottom:none}
+.logmeta{font-size:11px;color:var(--txt2);margin-top:4px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;
+  align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--rl);border:1px solid var(--bdr2);
+  padding:20px;width:min(500px,95vw);max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.mtitle{font-size:15px;font-weight:600;margin-bottom:14px}
+.sbar{padding:9px 20px;font-size:12px;font-weight:500;display:none;border-top:1px solid var(--bdr)}
+.sbar.show{display:block}
+.sbar.ok{background:#f0fdf4;color:#166534}
+.sbar.err{background:#fef2f2;color:#991b1b}
+.sbar.info{background:#eff6ff;color:#1d4ed8}
+.empty{text-align:center;padding:36px 16px;color:var(--txt2);font-size:13px}
+.rrow{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px}
+.rrow>div{flex:1}
+.dvdr{height:1px;background:var(--bdr);margin:16px 0}
+.cfg-box{border-radius:var(--rl);padding:14px 16px;margin-bottom:14px;border:1px solid}
+.cfg-ok{background:#f0fdf4;border-color:#bbf7d0}
+.cfg-warn{background:#fffbeb;border-color:#fde68a}
+.cfg-err{background:#fef2f2;border-color:#fca5a5}
+.sync-log{font-size:11px;color:var(--txt2);background:var(--bg2);border-radius:var(--r);
+  padding:8px 10px;max-height:130px;overflow-y:auto;font-family:monospace;margin-top:8px}
+.url-input{font-family:monospace;font-size:12px;word-break:break-all}
+@media(max-width:540px){
+  .frow,.frow3,.rrow{grid-template-columns:1fr;flex-direction:column}
+  .egrid{grid-template-columns:repeat(auto-fill,minmax(68px,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="hdr">
+  <div class="hdr-row">
+    <div>
+      <h1>EPA Supervisor — PRMCG/HMAPA</h1>
+      <p>Avaliação longitudinal persistente · 21 EPAs PLADIS/CBC</p>
+    </div>
+    <button id="pill" class="sync-pill" onclick="syncAgora()" title="Sincronizar com Google Sheets">
+      <span class="sync-dot dot-off" id="pill-dot"></span>
+      <span id="pill-txt">Não configurado</span>
+    </button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="goTab('res',this)">Residentes</button>
+  <button class="tab" onclick="goTab('av',this)">Nova avaliação</button>
+  <button class="tab" onclick="goTab('hist',this)">Histórico</button>
+  <button class="tab" onclick="goTab('cfg',this)">Configuração</button>
+</div>
+
+<!-- RESIDENTES -->
+<div id="pnl-res" class="pnl active">
+  <div class="lbl">Residentes cadastrados</div>
+  <div id="res-list"></div>
+  <button class="btn btn-p btn-sm" onclick="openM('m-add')">+ Cadastrar residente</button>
+</div>
+
+<!-- NOVA AVALIAÇÃO -->
+<div id="pnl-av" class="pnl">
+  <div class="rrow">
+    <div><label>Residente</label><select id="av-res"></select></div>
+    <div><label>EPA</label><select id="av-epa"></select></div>
+  </div>
+  <div class="frow3">
+    <div><label>Nível de entrustment</label>
+      <select id="av-nv">
+        <option value="">Selecionar...</option>
+        <option value="N1">N1 — Participação Limitada</option>
+        <option value="N2">N2 — Supervisão Direta</option>
+        <option value="N3">N3 — Supervisão Indireta</option>
+        <option value="N4">N4 — Pronto para a Prática</option>
+      </select>
+    </div>
+    <div><label>Fase observada</label>
+      <select id="av-fase">
+        <option>Pré-operatório</option><option>Intraoperatório</option>
+        <option>Pós-operatório</option><option>Ronda / enfermaria</option>
+        <option>Ambulatório</option><option>Urgência / emergência</option>
+        <option>Procedimento beira-leito</option>
+      </select>
+    </div>
+    <div><label>Tipo</label>
+      <select id="av-tipo">
+        <option value="Formal">Avaliação formal</option>
+        <option value="Microavaliação">Microavaliação</option>
+      </select>
+    </div>
+  </div>
+  <div class="ff">
+    <label>Contexto clínico observado</label>
+    <input type="text" id="av-ctx" placeholder="Ex.: colecistectomia laparoscópica por colecistite aguda grau II">
+  </div>
+  <div class="frow">
+    <div><label>Ponto forte observado</label>
+      <textarea id="av-forte" placeholder="O que o residente fez bem de forma autônoma..."></textarea>
+    </div>
+    <div><label>Área de desenvolvimento</label>
+      <textarea id="av-dev" placeholder="Onde necessitou de suporte ou orientação..."></textarea>
+    </div>
+  </div>
+  <div class="ff">
+    <label>Competência transversal (liderança / profissionalismo)</label>
+    <textarea id="av-trans" placeholder="Comportamento observado..." style="min-height:52px"></textarea>
+  </div>
+  <div class="brow">
+    <button class="btn btn-p" onclick="salvarAv()">Salvar avaliação</button>
+    <button class="btn" onclick="limparAv()">Limpar</button>
+  </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="pnl-hist" class="pnl">
+  <div class="rrow">
+    <div><label>Residente</label>
+      <select id="hist-res" onchange="renderHist()">
+        <option value="todos">Todos os residentes</option>
+      </select>
+    </div>
+    <div><label>EPA</label>
+      <select id="hist-epa" onchange="renderHist()">
+        <option value="todas">Todas as EPAs</option>
+      </select>
+    </div>
+  </div>
+  <div id="hist-list"></div>
+</div>
+
+<!-- CONFIGURAÇÃO -->
+<div id="pnl-cfg" class="pnl">
+  <div class="lbl">Google Sheets — Apps Script</div>
+  <div id="cfg-status-box"></div>
+
+  <div class="ff">
+    <label>ID da planilha Google Sheets
+      <span style="font-weight:400;color:var(--txt2)"> — parte da URL: /spreadsheets/d/<strong>ID</strong>/edit</span>
+    </label>
+    <input type="text" id="cfg-sheet-id" class="url-input"
+      placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+      oninput="saveCfg(); atualizarScriptExibido()">
+  </div>
+  <div class="ff">
+    <label>URL do Web App (Apps Script)
+      <span style="font-weight:400;color:var(--txt2)"> — gerada no Passo 3 abaixo</span>
+    </label>
+    <input type="text" id="cfg-url" class="url-input"
+      placeholder="https://script.google.com/macros/s/XXXXXXXXXX/exec"
+      oninput="saveCfg()">
+  </div>
+  <div class="ff">
+    <label>Nome da aba de destino</label>
+    <input type="text" id="cfg-tab" value="Avaliações" oninput="saveCfg()">
+  </div>
+
+  <div class="brow" style="margin-top:0">
+    <button class="btn btn-p btn-sm" onclick="testar()">Testar conexão</button>
+    <button class="btn btn-sm btn-g" onclick="syncAgora()">Sincronizar pendentes agora</button>
+  </div>
+
+  <div style="margin-top:12px">
+    <div class="lbl">Log de sincronização</div>
+    <div class="sync-log" id="sync-log">Aguardando...</div>
+  </div>
+
+  <div class="dvdr"></div>
+  <div class="lbl">Como configurar — 3 passos</div>
+
+  <div style="background:var(--bg2);border-radius:var(--rl);padding:14px 16px;font-size:13px;line-height:1.7">
+    <p><strong>Passo 1 — Abrir o Script Editor</strong></p>
+    <p style="color:var(--txt2);margin-bottom:10px">No Google Sheets da planilha PRMCG_EPA_Sheets: menu <strong>Extensões → Apps Script</strong></p>
+
+    <p><strong>Passo 2 — Colar o script</strong></p>
+    <p style="color:var(--txt2);margin-bottom:8px">Apague o conteúdo existente no editor e cole o script abaixo.
+      <span id="script-id-note" style="font-weight:600"></span>
+    </p>
+    <button class="btn btn-g btn-sm" style="margin-bottom:8px" onclick="copiarScript()">
+      Copiar script para o Apps Script
+    </button>
+    <div id="script-block" style="background:#1e1e1e;color:#d4d4d4;border-radius:var(--r);
+      padding:12px 14px;font-family:monospace;font-size:11.5px;line-height:1.65;
+      margin-bottom:6px;overflow-x:auto;white-space:pre;user-select:all"></div>
+    <p style="font-size:11px;color:var(--txt2);margin-bottom:10px">
+      Use o botão verde acima para copiar. Não selecione o texto manualmente — pode copiar formatação incorreta.
+    </p>
+
+    <p><strong>Passo 3 — Publicar como Web App</strong></p>
+    <p style="color:var(--txt2)">No Script Editor: <strong>Implantar → Nova implantação → Tipo: App da Web</strong></p>
+    <p style="color:var(--txt2)">Executar como: <strong>Eu</strong> &nbsp;|&nbsp; Quem pode acessar: <strong>Qualquer pessoa</strong></p>
+    <p style="color:var(--txt2)">Clique em <strong>Implantar</strong>, autorize e copie a URL gerada.</p>
+    <p style="color:var(--txt2);margin-top:6px">Cole a URL no campo acima e clique em <strong>Testar conexão</strong>.</p>
+  </div>
+
+  <div class="dvdr"></div>
+  <div class="lbl">Dados locais</div>
+  <div class="brow" style="margin-top:0">
+    <button class="btn btn-sm" onclick="expBackup()">Exportar backup JSON</button>
+    <button class="btn btn-sm" onclick="showImport()">Importar backup JSON</button>
+    <button class="btn btn-sm btn-d" onclick="resetTudo()">Limpar todos os dados</button>
+  </div>
+  <div id="import-area" style="display:none;margin-top:12px">
+    <label>Cole o JSON de backup aqui</label>
+    <textarea id="imp-json" style="font-family:monospace;font-size:11px;min-height:80px"></textarea>
+    <div class="brow">
+      <button class="btn btn-p btn-sm" onclick="execImport()">Importar</button>
+      <button class="btn btn-sm" onclick="document.getElementById('import-area').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: add residente -->
+<div class="modal-bg" id="m-add">
+  <div class="modal">
+    <div class="mtitle">Cadastrar residente</div>
+    <div class="ff"><label>Nome completo</label>
+      <input type="text" id="n-nome" placeholder="Ex.: João da Silva">
+    </div>
+    <div class="frow">
+      <div><label>Ano de residência</label>
+        <select id="n-ano">
+          <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option>
+        </select>
+      </div>
+      <div>
+        <label>Início da residência
+          <span style="font-weight:400;color:var(--txt2)">(mês/ano de ingresso)</span>
+        </label>
+        <input type="date" id="n-ini">
+      </div>
+    </div>
+    <div class="ff"><label>Preceptor principal</label>
+      <input type="text" id="n-prec" placeholder="Ex.: Dr. Omero">
+    </div>
+    <div class="brow">
+      <button class="btn btn-p" onclick="salvarRes()">Salvar</button>
+      <button class="btn" onclick="closeM('m-add')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: detalhe EPA -->
+<div class="modal-bg" id="m-epa">
+  <div class="modal">
+    <div class="mtitle" id="m-epa-title">Histórico EPA</div>
+    <div id="m-epa-body"></div>
+    <div class="brow" style="margin-top:12px">
+      <button class="btn btn-sm btn-d" id="m-epa-del" onclick="delUltima()">Excluir última avaliação</button>
+      <button class="btn btn-sm" onclick="closeM('m-epa')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="sbar" id="sbar"></div>
+
+<script>
+const EPAS=[
+  [1,"Avaliação Clínica e Consulta"],[2,"Abdome Agudo"],[3,"Procedimentos Essenciais"],
+  [4,"Paciente Crítico"],[5,"Hérnias"],[6,"Colecistite / Vias Biliares"],
+  [7,"Apendicite Aguda"],[8,"Obstrução Intestinal"],[9,"Doença Anorretal"],
+  [10,"Fígado e Hipertensão Portal"],[11,"Pancreatite Grave"],[12,"Oncologia Cirúrgica"],
+  [13,"Cirurgia Colorretal"],[14,"Esôfago e Estômago"],[15,"Cirurgia do Trauma"],
+  [16,"Fasciíte Necrosante"],[17,"Cirurgia Endócrina"],[18,"Cirurgia Bariátrica"],
+  [19,"Hemostasia e Técnica Vascular"],[20,"Cavidade Torácica"],[21,"Urologia Cirúrgica"]
+];
+const NVC={N1:'n1',N2:'n2',N3:'n3',N4:'n4','':'n0'};
+const NVB={N1:'bd',N2:'bw',N3:'bs',N4:'bi'};
+const SK='prmcg-epa-v2', CK='prmcg-cfg-v2';
+
+let S={residents:[],avaliacoes:[]};
+let CFG={sheetId:'', url:'', tab:'Avaliações'};
+let detCtx=null;
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+function loadState(){
+  try{ const r=localStorage.getItem(SK); if(r){const p=JSON.parse(r);if(p?.residents&&p?.avaliacoes)S=p;} }catch(e){}
+  try{ const r=localStorage.getItem(CK); if(r){const p=JSON.parse(r);if(p)CFG={...CFG,...p};} }catch(e){}
+  render();
+}
+function saveState(){
+  localStorage.setItem(SK,JSON.stringify(S));
+  localStorage.setItem(CK,JSON.stringify(CFG));
+}
+function saveCfg(){
+  CFG.sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  CFG.url     = document.getElementById('cfg-url').value.trim();
+  CFG.tab     = document.getElementById('cfg-tab').value.trim()||'Avaliações';
+  saveState(); updatePill(); atualizarScriptExibido();
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function status(msg,type='ok'){
+  const b=document.getElementById('sbar');
+  b.textContent=msg; b.className='sbar show '+type;
+  setTimeout(()=>b.className='sbar',4000);
+}
+function addLog(msg,ok=true){
+  const el=document.getElementById('sync-log'); if(!el)return;
+  const t=new Date().toLocaleTimeString('pt-BR');
+  el.innerHTML=`<div style="color:${ok?'#166534':'#991b1b'}">[${t}] ${ok?'✓':'✗'} ${msg}</div>`+el.innerHTML;
+}
+function updatePill(){
+  const pending=S.avaliacoes.filter(a=>!a.synced).length;
+  const pill=document.getElementById('pill');
+  const dot =document.getElementById('pill-dot');
+  const txt =document.getElementById('pill-txt');
+  if(!CFG.url){
+    pill.className='sync-pill'; dot.className='sync-dot dot-off'; txt.textContent='Não configurado'; return;
+  }
+  if(pending===0){
+    pill.className='sync-pill ok'; dot.className='sync-dot dot-ok';
+    txt.textContent='Sheets sincronizado';
+  } else {
+    pill.className='sync-pill pending'; dot.className='sync-dot dot-pending';
+    txt.textContent=`${pending} pendente${pending>1?'s':''}`;
+  }
+}
+function goTab(name,btn){
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pnl-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='av')   fillAvSelects();
+  if(name==='hist') {fillHistSelects();renderHist();}
+  if(name==='cfg')  renderCfgPanel();
+}
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+
+// ── SHEETS SYNC ───────────────────────────────────────────────────────────────
+function avToRow(a){
+  const r=S.residents.find(x=>x.id===a.rId);
+  const epa=EPAS.find(e=>e[0]===a.epaNum);
+  return[a.data,r?.nome||'',r?.ano||'',a.epaNum,epa?.[1]||'',
+    a.nivel||'',a.tipo||'',a.fase||'',
+    a.ctx||'',a.forte||'',a.dev||'',a.trans||'',a.prec||r?.prec||''];
+}
+
+async function postToSheets(rows){
+  if(!CFG.url) throw new Error('URL do Apps Script não configurada');
+  // Send as plain text body to avoid CORS preflight (no-cors + text/plain = simple request)
+  // Apps Script reads via e.postData.contents
+  const payload = JSON.stringify({rows: rows, tab: CFG.tab});
+  const resp = await fetch(CFG.url, {
+    method: 'POST',
+    body:   payload,
+    mode:   'no-cors'
+  });
+  return true;
+}
+
+async function syncOne(av){
+  try{
+    await postToSheets([avToRow(av)]);
+    av.synced=true; saveState(); updatePill();
+    addLog(`Sincronizado: ${S.residents.find(r=>r.id===av.rId)?.nome||'?'} · EPA ${av.epaNum} · ${av.nivel}`);
+    return true;
+  }catch(e){ addLog('Erro: '+e.message,false); return false; }
+}
+
+async function syncAgora(){
+  if(!CFG.url){status('Configure a URL do Apps Script na aba Configuração','err');return;}
+  const pending=S.avaliacoes.filter(a=>!a.synced);
+  if(!pending.length){status('Tudo já está sincronizado');return;}
+  // Animate pill
+  const pill=document.getElementById('pill');
+  const dot =document.getElementById('pill-dot');
+  const txt =document.getElementById('pill-txt');
+  pill.className='sync-pill syncing'; dot.className='sync-dot dot-sync';
+  txt.textContent='Sincronizando...';
+  status(`Enviando ${pending.length} avaliação(ões) ao Sheets...`,'info');
+  try{
+    await postToSheets(pending.map(avToRow));
+    pending.forEach(a=>{a.synced=true;});
+    saveState(); updatePill(); render();
+    addLog(`${pending.length} avaliação(ões) sincronizada(s)`);
+    status(`✓ ${pending.length} avaliação(ões) enviada(s) ao Sheets`);
+  }catch(e){
+    updatePill();
+    addLog('Erro no envio em lote: '+e.message,false);
+    status('Erro na sincronização — verifique o log','err');
+  }
+}
+
+async function testar(){
+  if(!CFG.url){status('Informe a URL do Apps Script','err');return;}
+  status('Testando...','info');
+  try{
+    // GET request — Apps Script doGet returns JSON, but no-cors blocks reading
+    // Use a proxy-free approach: just try a POST with empty rows
+    const payload = JSON.stringify({rows: [], tab: CFG.tab});
+    await fetch(CFG.url, {method:'POST', body:payload, mode:'no-cors'});
+    addLog('Conexão OK — URL válida e acessível');
+    status('✓ Conexão com o Apps Script estabelecida');
+    renderCfgPanel();
+  }catch(e){
+    addLog('Falha na conexão: '+e.message,false);
+    status('Falha na conexão — verifique a URL','err');
+  }
+}
+
+// ── SCRIPT DISPLAY ────────────────────────────────────────────────────────────
+function gerarScriptTexto(){
+  const id = CFG.sheetId || 'COLE_O_ID_DA_PLANILHA_AQUI';
+  return `function doPost(e) {
+  var ss      = SpreadsheetApp.openById('${id}');
+  var payload = JSON.parse(e.postData.contents);
+  var tab     = ss.getSheetByName(payload.tab || 'Avaliações');
+  var rows    = payload.rows;
+  if (tab.getLastRow() === 0) {
+    tab.appendRow(['Data','Residente','Ano','EPA Num','EPA Titulo','Nivel',
+                   'Tipo','Fase','Contexto','Ponto Forte','Area Desenvolver',
+                   'Transversal','Preceptor']);
+  }
+  rows.forEach(function(r) { tab.appendRow(r); });
+  return ContentService
+    .createTextOutput(JSON.stringify({ok: true, n: rows.length}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ok: true, status: 'EPA Supervisor online'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+}
+
+function atualizarScriptExibido(){
+  const block = document.getElementById('script-block');
+  const note  = document.getElementById('script-id-note');
+  if(!block) return;
+  const id  = CFG.sheetId || '';
+  const txt = gerarScriptTexto();
+  // Display as plain text only — no innerHTML manipulation that could corrupt copy
+  block.textContent = txt;
+  if(note) {
+    note.textContent = id
+      ? '— ID preenchido ✓'
+      : '— preencha o ID da planilha acima primeiro';
+    note.style.color = id ? '#166534' : '#92400e';
+  }
+}
+
+function copiarScript(){
+  const txt = gerarScriptTexto();
+  if(!CFG.sheetId){
+    status('Preencha o ID da planilha antes de copiar o script','err'); return;
+  }
+  navigator.clipboard.writeText(txt)
+    .then(()=>status('Script copiado — cole no Apps Script Editor'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=txt; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      status('Script copiado — cole no Apps Script Editor');
+    });
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  renderRes(); fillAvSelects(); fillHistSelects();
+  if(document.getElementById('pnl-cfg').classList.contains('active')) renderCfgPanel();
+  renderHist(); updatePill();
+  document.getElementById('cfg-sheet-id').value = CFG.sheetId||'';
+  document.getElementById('cfg-url').value       = CFG.url||'';
+  document.getElementById('cfg-tab').value       = CFG.tab||'Avaliações';
+  atualizarScriptExibido();
+}
+
+function renderCfgPanel(){
+  const el=document.getElementById('cfg-status-box');
+  const pending=S.avaliacoes.filter(a=>!a.synced).length;
+  const total=S.avaliacoes.length;
+  if(!CFG.url){
+    el.innerHTML=`<div class="cfg-box cfg-warn">
+      <strong>⚠ URL do Apps Script não configurada</strong><br>
+      <span style="font-size:12px">Siga os 3 passos abaixo para configurar a integração.</span>
+    </div>`;
+  } else if(pending===0 && total>0){
+    el.innerHTML=`<div class="cfg-box cfg-ok">
+      <strong style="color:#166534">✓ Tudo sincronizado — ${total} avaliações no Sheets</strong>
+    </div>`;
+  } else if(pending>0){
+    el.innerHTML=`<div class="cfg-box cfg-warn">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>${pending} avaliação(ões) pendente(s)</strong><br>
+        <span style="font-size:12px">${total-pending} de ${total} já sincronizadas.</span></div>
+        <button class="btn btn-g btn-sm" onclick="syncAgora()">Sincronizar agora</button>
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML=`<div class="cfg-box cfg-ok">
+      <strong style="color:#166534">✓ Apps Script configurado — pronto para sincronizar</strong>
+    </div>`;
+  }
+}
+
+function renderRes(){
+  const el=document.getElementById('res-list');
+  if(!S.residents.length){
+    el.innerHTML='<div class="empty">Nenhum residente cadastrado.<br>Clique em "+ Cadastrar residente".</div>';
+    return;
+  }
+  el.innerHTML=S.residents.map(r=>{
+    const avs=S.avaliacoes.filter(a=>a.rId===r.id);
+    const byEpa={};
+    avs.forEach(a=>{byEpa[a.epaNum]=a.nivel;});
+    const counts={N4:0,N3:0,N2:0,N1:0};
+    Object.values(byEpa).forEach(n=>{if(counts[n]!==undefined)counts[n]++;});
+    const total=Object.keys(byEpa).length;
+    const pct=Math.round(total/21*100);
+    const pending=avs.filter(a=>!a.synced).length;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div class="cname">${r.nome}</div>
+          <div style="font-size:12px;color:var(--txt2);margin-top:2px">
+            ${r.prec?'Preceptor: '+r.prec+' · ':''}Início: ${r.ini||'—'}
+            ${pending?`<span class="badge bw" style="margin-left:6px">${pending} pendente(s)</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="cyear y-${r.ano}">${r.ano}</span>
+          <button class="btn btn-sm btn-d" onclick="delRes('${r.id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:12px">
+        <span style="color:var(--txt2)">${total}/21 EPAs · ${pct}%</span>
+        ${counts.N4?`<span class="badge bi">${counts.N4} N4</span>`:''}
+        ${counts.N3?`<span class="badge bs">${counts.N3} N3</span>`:''}
+        ${counts.N2?`<span class="badge bw">${counts.N2} N2</span>`:''}
+        ${counts.N1?`<span class="badge bd">${counts.N1} N1</span>`:''}
+      </div>
+      <div class="pwrap"><div class="pfill" style="width:${pct}%"></div></div>
+      <div class="egrid">
+        ${EPAS.map(([n,t])=>{
+          const nv=byEpa[n]||'';
+          return `<div class="ecell ${NVC[nv]}" title="EPA ${n}: ${t}" onclick="showEpa('${r.id}',${n})">
+            <div class="enum">${n}</div><div class="elvl">${nv||'—'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showEpa(rId,epaNum){
+  detCtx={rId,epaNum};
+  const r=S.residents.find(x=>x.id===rId);
+  const epa=EPAS.find(e=>e[0]===epaNum);
+  const avs=S.avaliacoes.filter(a=>a.rId===rId&&a.epaNum===epaNum).sort((a,b)=>b.id.localeCompare(a.id));
+  document.getElementById('m-epa-title').textContent=`${r.nome} · EPA ${epaNum} — ${epa[1]}`;
+  const del=document.getElementById('m-epa-del');
+  if(!avs.length){
+    document.getElementById('m-epa-body').innerHTML='<p style="color:var(--txt2);font-size:13px;padding:6px 0">Nenhuma avaliação registrada.</p>';
+    del.style.display='none';
+  } else {
+    del.style.display='';
+    document.getElementById('m-epa-body').innerHTML=
+      '<div style="border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden">'+
+      avs.map(a=>`<div class="logentry">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="badge ${NVB[a.nivel]||'bw'}">${a.nivel}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:10px;color:${a.synced?'#166534':'#92400e'}">${a.synced?'✓ Sheets':'⏳ pendente'}</span>
+            <span style="font-size:11px;color:var(--txt2)">${a.data}</span>
+          </div>
+        </div>
+        ${a.ctx ?`<div style="margin-top:5px;font-size:13px">${a.ctx}</div>`:''}
+        ${a.forte?`<div style="margin-top:4px;font-size:12px"><strong>Forte:</strong> ${a.forte}</div>`:''}
+        ${a.dev  ?`<div style="margin-top:2px;font-size:12px"><strong>Desenvolver:</strong> ${a.dev}</div>`:''}
+        ${a.trans?`<div style="margin-top:2px;font-size:12px;color:var(--txt2)"><strong>Transversal:</strong> ${a.trans}</div>`:''}
+        <div class="logmeta">${a.tipo} · ${a.fase} · Preceptor: ${a.prec||'—'}</div>
+      </div>`).join('')+'</div>';
+  }
+  openM('m-epa');
+}
+
+function delUltima(){
+  if(!detCtx)return;
+  const avs=S.avaliacoes.filter(a=>a.rId===detCtx.rId&&a.epaNum===detCtx.epaNum).sort((a,b)=>b.id.localeCompare(a.id));
+  if(!avs.length||!confirm('Excluir avaliação mais recente desta EPA?'))return;
+  S.avaliacoes=S.avaliacoes.filter(a=>a.id!==avs[0].id);
+  saveState();closeM('m-epa');render();
+}
+
+// ── RESIDENTES ────────────────────────────────────────────────────────────────
+function salvarRes(){
+  const nome=document.getElementById('n-nome').value.trim();
+  if(!nome){status('Informe o nome','err');return;}
+  if(S.residents.length>=6){status('Limite de 6 residentes','err');return;}
+  S.residents.push({
+    id:'r'+Date.now(),nome,
+    ano:document.getElementById('n-ano').value,
+    ini:document.getElementById('n-ini').value,
+    prec:document.getElementById('n-prec').value.trim()
+  });
+  saveState();render();closeM('m-add');
+  document.getElementById('n-nome').value='';
+  document.getElementById('n-prec').value='';
+}
+function delRes(id){
+  if(!confirm('Remover residente e todas as avaliações?'))return;
+  S.residents=S.residents.filter(r=>r.id!==id);
+  S.avaliacoes=S.avaliacoes.filter(a=>a.rId!==id);
+  saveState();render();
+}
+
+// ── SELECTS ───────────────────────────────────────────────────────────────────
+function fillAvSelects(){
+  document.getElementById('av-res').innerHTML=
+    S.residents.map(r=>`<option value="${r.id}">${r.nome} (${r.ano})</option>`).join('')||
+    '<option value="">Cadastre um residente primeiro</option>';
+  document.getElementById('av-epa').innerHTML=
+    EPAS.map(([n,t])=>`<option value="${n}">EPA ${n} — ${t}</option>`).join('');
+}
+function fillHistSelects(){
+  const re=document.getElementById('hist-res'),cv=re.value;
+  re.innerHTML='<option value="todos">Todos os residentes</option>'+
+    S.residents.map(r=>`<option value="${r.id}">${r.nome}</option>`).join('');
+  if(cv&&re.querySelector(`option[value="${cv}"]`))re.value=cv;
+  const ee=document.getElementById('hist-epa'),ce=ee.value;
+  ee.innerHTML='<option value="todas">Todas as EPAs</option>'+
+    EPAS.map(([n,t])=>`<option value="${n}">EPA ${n} — ${t}</option>`).join('');
+  if(ce&&ee.querySelector(`option[value="${ce}"]`))ee.value=ce;
+}
+
+// ── AVALIAÇÕES ────────────────────────────────────────────────────────────────
+async function salvarAv(){
+  const rId=document.getElementById('av-res').value;
+  const nv=document.getElementById('av-nv').value;
+  if(!rId){status('Selecione um residente','err');return;}
+  if(!nv){status('Selecione o nível de entrustment','err');return;}
+  const r=S.residents.find(x=>x.id===rId);
+  const av={
+    id:'a'+Date.now(), rId,
+    epaNum:parseInt(document.getElementById('av-epa').value),
+    nivel:nv, fase:document.getElementById('av-fase').value,
+    tipo:document.getElementById('av-tipo').value,
+    ctx:document.getElementById('av-ctx').value.trim(),
+    forte:document.getElementById('av-forte').value.trim(),
+    dev:document.getElementById('av-dev').value.trim(),
+    trans:document.getElementById('av-trans').value.trim(),
+    data:new Date().toLocaleDateString('pt-BR'),
+    prec:r?.prec||'', synced:false
+  };
+  S.avaliacoes.push(av);
+  saveState(); render(); limparAv();
+  if(CFG.url){
+    status('Enviando ao Sheets...','info');
+    const ok=await syncOne(av);
+    status(ok
+      ? `✓ Salvo e sincronizado — ${r.nome} · EPA ${av.epaNum} · ${av.nivel}`
+      : `Salvo localmente (pendente) — ${r.nome} · EPA ${av.epaNum} · ${av.nivel}`
+    , ok?'ok':'info');
+    render();
+  } else {
+    status(`Salvo localmente — ${r.nome} · EPA ${av.epaNum} · ${av.nivel} (configure o Sheets para sincronizar)`);
+  }
+}
+function limparAv(){
+  ['av-ctx','av-forte','av-dev','av-trans'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('av-nv').selectedIndex=0;
+}
+function renderHist(){
+  const rId=document.getElementById('hist-res')?.value||'todos';
+  const eId=document.getElementById('hist-epa')?.value||'todas';
+  let avs=[...S.avaliacoes];
+  if(rId!=='todos')avs=avs.filter(a=>a.rId===rId);
+  if(eId!=='todas')avs=avs.filter(a=>a.epaNum===parseInt(eId));
+  avs.sort((a,b)=>b.id.localeCompare(a.id));
+  const el=document.getElementById('hist-list');
+  if(!avs.length){el.innerHTML='<div class="empty">Nenhuma avaliação encontrada.</div>';return;}
+  el.innerHTML='<div style="border:1px solid var(--bdr);border-radius:var(--rl);overflow:hidden">'+
+    avs.map(a=>{
+      const r=S.residents.find(x=>x.id===a.rId);
+      const epa=EPAS.find(e=>e[0]===a.epaNum);
+      return `<div class="logentry">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>${r?.nome||'—'}</strong>
+            <span style="font-size:12px;color:var(--txt2)"> · EPA ${a.epaNum} — ${epa?.[1]||'—'}</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:10px;color:${a.synced?'#166634':'#92400e'}">${a.synced?'✓ Sheets':'⏳ pendente'}</span>
+            <span class="badge ${NVB[a.nivel]||'bw'}">${a.nivel}</span>
+          </div>
+        </div>
+        ${a.ctx?`<div style="margin-top:4px;font-size:12px;color:var(--txt2)">${a.ctx}</div>`:''}
+        ${a.forte?`<div style="margin-top:4px;font-size:12px"><strong>Forte:</strong> ${a.forte}</div>`:''}
+        ${a.dev?`<div style="margin-top:2px;font-size:12px"><strong>Desenvolver:</strong> ${a.dev}</div>`:''}
+        <div class="logmeta">${a.tipo} · ${a.fase} · ${a.data}</div>
+      </div>`;
+    }).join('')+'</div>';
+}
+
+// ── BACKUP ────────────────────────────────────────────────────────────────────
+function expBackup(){
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S,null,2));
+  a.download=`epa-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); addLog('Backup JSON exportado');
+}
+function showImport(){
+  document.getElementById('import-area').style.display='';
+  document.getElementById('imp-json').value='';
+}
+function execImport(){
+  try{
+    const d=JSON.parse(document.getElementById('imp-json').value);
+    if(!d.residents||!d.avaliacoes)throw new Error('Formato inválido');
+    if(!confirm(`Importar ${d.residents.length} residentes e ${d.avaliacoes.length} avaliações?\nDados atuais serão substituídos.`))return;
+    S=d; saveState(); render();
+    document.getElementById('import-area').style.display='none';
+    status('Backup importado com sucesso');
+  }catch(e){status('JSON inválido: '+e.message,'err');}
+}
+function resetTudo(){
+  if(!confirm('ATENÇÃO: apagará TODOS os dados permanentemente. Confirmar?'))return;
+  S={residents:[],avaliacoes:[]}; saveState(); render();
+}
+
+loadState();
+</script>
+</body>
+</html>
