@@ -348,14 +348,33 @@ const NVC={N1:'n1',N2:'n2',N3:'n3',N4:'n4','':'n0'};
 const NVB={N1:'bd',N2:'bw',N3:'bs',N4:'bi'};
 const SK='prmcg-epa-v2', CK='prmcg-cfg-v2';
 
+// ── CONFIGURAÇÃO PRÉ-DEFINIDA ─────────────────────────────────────────────────
+// Valores padrão embutidos — qualquer preceptor abre o app já configurado.
+// Altere aqui se a URL do Apps Script ou o ID da planilha mudarem.
+const CFG_DEFAULT = {
+  sheetId: '1Z3QISaCFGvq3L5loJA1b-3LfwOMpVb9Jr-MVx6iLUj0',
+  url:     'https://script.google.com/macros/s/AKfycbxWSh4k6aXphZdRT2vpHUn6qpRAaICQiFV8C1bGeedjVpHR35lPb7RvGlJMGz16UIIG/exec',
+  tab:     'Avaliações'
+};
+
 let S={residents:[],avaliacoes:[]};
-let CFG={sheetId:'', url:'', tab:'Avaliações'};
+let CFG={...CFG_DEFAULT};
 let detCtx=null;
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
 function loadState(){
   try{ const r=localStorage.getItem(SK); if(r){const p=JSON.parse(r);if(p?.residents&&p?.avaliacoes)S=p;} }catch(e){}
-  try{ const r=localStorage.getItem(CK); if(r){const p=JSON.parse(r);if(p)CFG={...CFG,...p};} }catch(e){}
+  try{
+    const r=localStorage.getItem(CK);
+    if(r){
+      const p=JSON.parse(r);
+      // Merge saved config over defaults — saved values take precedence
+      if(p) CFG={...CFG_DEFAULT,...p};
+    }
+    // If no saved config yet, CFG_DEFAULT is already loaded — save it so
+    // the fields appear populated on first open
+    else { localStorage.setItem(CK, JSON.stringify(CFG_DEFAULT)); }
+  }catch(e){}
   render();
 }
 function saveState(){
