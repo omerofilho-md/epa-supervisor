@@ -140,20 +140,12 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
 
 <!-- NOVA AVALIAÇÃO -->
 <div id="pnl-av" class="pnl">
+  <!-- Step 1: Select resident, EPA, context -->
   <div class="rrow">
-    <div><label>Residente</label><select id="av-res"></select></div>
-    <div><label>EPA</label><select id="av-epa"></select></div>
+    <div><label>Residente</label><select id="av-res" onchange="resetChecklist()"></select></div>
+    <div><label>EPA</label><select id="av-epa" onchange="loadChecklist()"></select></div>
   </div>
-  <div class="frow3">
-    <div><label>Nível de entrustment</label>
-      <select id="av-nv">
-        <option value="">Selecionar...</option>
-        <option value="N1">N1 — Participação Limitada</option>
-        <option value="N2">N2 — Supervisão Direta</option>
-        <option value="N3">N3 — Supervisão Indireta</option>
-        <option value="N4">N4 — Pronto para a Prática</option>
-      </select>
-    </div>
+  <div class="frow">
     <div><label>Fase observada</label>
       <select id="av-fase">
         <option>Pré-operatório</option><option>Intraoperatório</option>
@@ -173,21 +165,60 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
     <label>Contexto clínico observado</label>
     <input type="text" id="av-ctx" placeholder="Ex.: colecistectomia laparoscópica por colecistite aguda grau II">
   </div>
-  <div class="frow">
-    <div><label>Ponto forte observado</label>
-      <textarea id="av-forte" placeholder="O que o residente fez bem de forma autônoma..."></textarea>
+
+  <!-- Step 2: Behavioral checklist -->
+  <div id="checklist-area" style="display:none">
+    <div style="background:var(--bg2);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;
+      box-sizing:border-box;width:100%;overflow:hidden">
+      <div class="lbl" style="margin-bottom:10px">O que você observou? Marque os comportamentos presentes</div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px">Competência técnica e clínica</div>
+      <div id="chk-itens"></div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--navy);margin-top:12px;margin-bottom:6px">Liderança situacional</div>
+      <div id="chk-lideranca"></div>
+
+      <div style="font-size:12px;font-weight:600;color:#4A1942;margin-top:12px;margin-bottom:6px">Profissionalismo e ética</div>
+      <div id="chk-prof"></div>
     </div>
-    <div><label>Área de desenvolvimento</label>
-      <textarea id="av-dev" placeholder="Onde necessitou de suporte ou orientação..."></textarea>
+
+    <!-- Step 3: Auto-suggested level + confirmation -->
+    <div id="nivel-sugerido-box" style="display:none;border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;border:2px solid">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px" id="nivel-sugerido-txt"></div>
+      <div style="font-size:12px;color:var(--txt2);margin-bottom:10px">
+        Baseado nos comportamentos marcados. Confirme ou ajuste:
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-n1" onclick="confirmarNivel('N1')">N1 — Participação Limitada</button>
+        <button class="btn btn-sm" id="btn-n2" onclick="confirmarNivel('N2')">N2 — Supervisão Direta</button>
+        <button class="btn btn-sm" id="btn-n3" onclick="confirmarNivel('N3')">N3 — Supervisão Indireta</button>
+        <button class="btn btn-sm" id="btn-n4" onclick="confirmarNivel('N4')">N4 — Pronto para a Prática</button>
+      </div>
+      <div id="nivel-confirmado" style="margin-top:10px;font-size:13px;font-weight:600;display:none"></div>
+    </div>
+
+    <!-- Step 4: Free text (pre-filled from checklist) -->
+    <div class="frow">
+      <div><label>Ponto forte observado</label>
+        <textarea id="av-forte" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
+      </div>
+      <div><label>Área de desenvolvimento</label>
+        <textarea id="av-dev" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
+      </div>
+    </div>
+    <div class="ff">
+      <label>Observação adicional (opcional)</label>
+      <textarea id="av-trans" placeholder="Contexto adicional não coberto pelo checklist..." style="min-height:48px"></textarea>
+    </div>
+
+    <div class="brow">
+      <button class="btn btn-p" onclick="salvarAv()">Salvar avaliação</button>
+      <button class="btn" onclick="limparAv()">Limpar</button>
     </div>
   </div>
-  <div class="ff">
-    <label>Competência transversal (liderança / profissionalismo)</label>
-    <textarea id="av-trans" placeholder="Comportamento observado..." style="min-height:52px"></textarea>
-  </div>
-  <div class="brow">
-    <button class="btn btn-p" onclick="salvarAv()">Salvar avaliação</button>
-    <button class="btn" onclick="limparAv()">Limpar</button>
+
+  <div id="checklist-placeholder" style="text-align:center;padding:24px;color:var(--txt2);font-size:13px">
+    Selecione um residente e uma EPA para iniciar o checklist de avaliação.
   </div>
 </div>
 
@@ -336,13 +367,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
 
 <script>
 const EPAS=[
-  [1,"Avaliação Clínica e Consulta"],[2,"Abdome Agudo"],[3,"Procedimentos Essenciais"],
-  [4,"Paciente Crítico"],[5,"Hérnias"],[6,"Colecistite / Vias Biliares"],
-  [7,"Apendicite Aguda"],[8,"Obstrução Intestinal"],[9,"Doença Anorretal"],
-  [10,"Fígado e Hipertensão Portal"],[11,"Pancreatite Grave"],[12,"Oncologia Cirúrgica"],
-  [13,"Cirurgia Colorretal"],[14,"Esôfago e Estômago"],[15,"Cirurgia do Trauma"],
-  [16,"Fasciíte Necrosante"],[17,"Cirurgia Endócrina"],[18,"Cirurgia Bariátrica"],
-  [19,"Hemostasia e Técnica Vascular"],[20,"Cavidade Torácica"],[21,"Urologia Cirúrgica"]
+  [1,"Avaliação Clínica Cirúrgica e Consulta"],  [2,"Abdome Agudo e Urgências Abdominais"],  [3,"Procedimentos Essenciais e Acesso Vascular"],  [4,"Paciente Cirúrgico Crítico — Sepse e Hemorragia"],  [5,"Hérnia Inguinal e Outras Hérnias da Parede Abdominal"],  [6,"Colecistite e Doenças das Vias Biliares"],  [7,"Apendicite Aguda e Dor em Fossa Ilíaca Direita"],  [8,"Obstrução do Intestino Delgado e Grosso"],  [9,"Doença Anorretal Benigna"],  [10,"Cirurgia do Fígado, Vias Biliares e Hipertensão Portal"],  [11,"Pancreatite Aguda Grave e Necrosante"],  [12,"Oncologia Cirúrgica — Princípios e Neoplasias Cutâneas"],  [13,"Cirurgia do Cólon e Reto"],  [14,"Cirurgia do Esôfago e Estômago"],  [15,"Cirurgia do Trauma"],  [16,"Infecção de Partes Moles e Fasciíte Necrosante"],  [17,"Cirurgia Endócrina — Tireoide, Paratireoide e Adrenal"],  [18,"Cirurgia Bariátrica e Metabólica — Bases e Participação"],  [19,"Controle Cirúrgico de Hemorragia e Técnica Vascular Básica"],  [20,"Manejo Cirúrgico da Cavidade Torácica"],  [21,"Urologia — Procedimentos Essenciais e Urgências Urológicas"]
 ];
 const NVC={N1:'n1',N2:'n2',N3:'n3',N4:'n4','':'n0'};
 const NVB={N1:'bd',N2:'bw',N3:'bs',N4:'bi'};
@@ -706,6 +731,383 @@ function delRes(id){
   saveState();render();
 }
 
+// ── CHECKLIST DATA ────────────────────────────────────────────────────────────
+const EPA_CHECKLISTS = {
+  1:{title:"Avaliação Clínica Cirúrgica e Consulta",itens:[
+    {id:"a",text:"Coletou história completa e realizou exame físico dirigido sem orientação",niveis:[3,4]},
+    {id:"b",text:"Apresentou caso de forma estruturada (hipótese + plano) ao supervisor",niveis:[2,3,4]},
+    {id:"c",text:"Indicou exames complementares adequados sem ser solicitado",niveis:[3,4]},
+    {id:"d",text:"Obteve consentimento informado em linguagem acessível e verificou compreensão",niveis:[3,4]},
+    {id:"e",text:"Necessitou orientação para organizar a sequência da consulta ou ronda",niveis:[1,2]},
+    {id:"f",text:"Identificou e comunicou complicações pós-operatórias proativamente",niveis:[3,4]},
+    {id:"g",text:"Supervisionou ou ensinou R1 durante a avaliação",niveis:[4]},
+  ],lideranca:[
+    {id:"l1",text:"Organizou e priorizou os casos da ronda sem ser solicitado",niveis:[3,4]},
+    {id:"l2",text:"Dependeu do supervisor para organizar o fluxo do atendimento",niveis:[1,2]},
+  ],prof:[
+    {id:"p1",text:"Documentou raciocínio clínico no prontuário (não apenas condutas)",niveis:[3,4]},
+    {id:"p2",text:"Reconheceu limites e pediu ajuda antes que erros ocorressem",niveis:[3,4]},
+  ]},
+  2:{title:"Abdome Agudo e Urgências Abdominais",itens:[
+    {id:"a",text:"Classificou corretamente o tipo de abdome agudo sem orientação",niveis:[2,3,4]},
+    {id:"b",text:"Indicou exames diagnósticos adequados sem precisar ser orientado",niveis:[3,4]},
+    {id:"c",text:"Tomou decisão cirúrgica de urgência em casos prevalentes autonomamente",niveis:[3,4]},
+    {id:"d",text:"Executou etapas da laparotomia com supervisor scrubado dirigindo",niveis:[2]},
+    {id:"e",text:"Operou abdome agudo prevalente com supervisor de sobreaviso",niveis:[3]},
+    {id:"f",text:"Aguardou o supervisor para qualquer decisão em contexto de urgência",niveis:[1]},
+    {id:"g",text:"Solicitou apoio em complicações vasculares ou oncológicas proativamente",niveis:[4]},
+  ],lideranca:[
+    {id:"l1",text:"Coordenou urgência→CC→UTI definindo papéis da equipe",niveis:[3,4]},
+    {id:"l2",text:"Conduziu briefing pré-operatório e debriefing pós-cirurgia",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Manteve compostura profissional mesmo sob estresse operatório intenso",niveis:[3,4]},
+    {id:"p2",text:"Verbalizou raciocínio diagnóstico para a equipe de forma compreensível",niveis:[3,4]},
+  ]},
+  3:{title:"Procedimentos Essenciais e Acesso Vascular",itens:[
+    {id:"a",text:"Realizou acesso venoso central com técnica correta sem supervisão direta",niveis:[3,4]},
+    {id:"b",text:"Executou drenagem torácica por dissecção de forma autônoma",niveis:[3,4]},
+    {id:"c",text:"Realizou IOT, paracentese ou toracocentese com supervisor presente",niveis:[2]},
+    {id:"d",text:"Verbalizou os passos do procedimento ensinando outro residente/estudante",niveis:[4]},
+    {id:"e",text:"Realizou checagem de material antes do procedimento de forma autônoma",niveis:[3,4]},
+    {id:"f",text:"Necessitou supervisão constante e presente para qualquer procedimento",niveis:[1]},
+    {id:"g",text:"Reconheceu e reportou complicações proativamente após o procedimento",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Instruiu R1/estudante durante o procedimento adaptando nível da explicação",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Documentou o procedimento e complicações de forma completa no prontuário",niveis:[3,4]},
+  ]},
+  4:{title:"Paciente Cirúrgico Crítico — Sepse e Hemorragia",itens:[
+    {id:"a",text:"Reconheceu e classificou o tipo de choque de forma autônoma",niveis:[2,3,4]},
+    {id:"b",text:"Iniciou ressuscitação com supervisor ao lado",niveis:[2]},
+    {id:"c",text:"Manejou paciente crítico prevalente com supervisor de sobreaviso",niveis:[3]},
+    {id:"d",text:"Liderou atendimento ao crítico tomando decisões de controle de dano",niveis:[4]},
+    {id:"e",text:"Acionou especialistas com informação clínica estruturada (ISBAR)",niveis:[3,4]},
+    {id:"f",text:"Participou apenas como executor de tarefas, nunca liderou",niveis:[1]},
+  ],lideranca:[
+    {id:"l1",text:"Assumiu liderança funcional na ressuscitação na ausência do supervisor",niveis:[3,4]},
+    {id:"l2",text:"Usou comunicação em loop fechado distribuindo tarefas com clareza",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Notificou complicações proativamente e participou da análise coletiva",niveis:[3,4]},
+  ]},
+  5:{title:"Hérnia Inguinal e Outras Hérnias da Parede Abdominal",itens:[
+    {id:"a",text:"Fechou fáscia e pele sob supervisão direta como auxiliar",niveis:[1]},
+    {id:"b",text:"Realizou herniorrafia aberta com supervisor scrubado",niveis:[2]},
+    {id:"c",text:"Operou hérnias inguinais não-complicadas com autonomia",niveis:[3]},
+    {id:"d",text:"Operou via laparoscópica (TAPP/TEP) e hérnias recidivadas",niveis:[4]},
+    {id:"e",text:"Conduziu briefing pré-operatório verificando posicionamento e equipamento",niveis:[3,4]},
+    {id:"f",text:"Solicitou feedback ativo após cirurgias identificando áreas de melhoria",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Organizou o CC eletivo de forma autônoma",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Integrou feedback ao planejamento do próximo caso documentando aprendizados",niveis:[4]},
+  ]},
+  6:{title:"Colecistite e Doenças das Vias Biliares",itens:[
+    {id:"a",text:"Participou como auxiliar sem contribuição ativa no planejamento",niveis:[1]},
+    {id:"b",text:"Realizou dissecção do triângulo de Calot com supervisor ao lado",niveis:[2]},
+    {id:"c",text:"Operou colecistectomia laparoscópica não-complicada com autonomia",niveis:[3]},
+    {id:"d",text:"Manejou casos complexos (Mirizzi I/II), reconheceu lesão de VB",niveis:[4]},
+    {id:"e",text:"Identificou indicação cirúrgica criticamente e documentou raciocínio",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Conduziu briefing laparoscópico e comunicou plano de conversão à equipe",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Avaliou indicação de forma crítica sem pressão do supervisor",niveis:[3,4]},
+  ]},
+  7:{title:"Apendicite Aguda e Dor em Fossa Ilíaca Direita",itens:[
+    {id:"a",text:"Participou como auxiliar sem tomar iniciativa diagnóstica",niveis:[1]},
+    {id:"b",text:"Realizou apendicectomia aberta simples com supervisor scrubado",niveis:[2]},
+    {id:"c",text:"Operou laparoscopicamente casos não-complicados com supervisor de sobreaviso",niveis:[3]},
+    {id:"d",text:"Manejou peritonite difusa e plastron, liderou equipe",niveis:[4]},
+    {id:"e",text:"Apresentou diagnóstico diferencial estruturado sem precisar ser estimulado",niveis:[3,4]},
+    {id:"f",text:"Manteve prontuário atualizado e fidedigno sem ser cobrado",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Conduziu discussão diagnóstica verbalizando incerteza e critérios de decisão",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Documentou raciocínio diagnóstico e decisões de forma fidedigna",niveis:[3,4]},
+  ]},
+  8:{title:"Obstrução do Intestino Delgado e Grosso",itens:[
+    {id:"a",text:"Auxiliou na cirurgia sem participação ativa nas decisões",niveis:[1]},
+    {id:"b",text:"Realizou enterectomia e anastomose com supervisor scrubado",niveis:[2]},
+    {id:"c",text:"Operou obstrução por bridas e confeccionou colostomia com autonomia",niveis:[3]},
+    {id:"d",text:"Manejou volvo, obstrução neoplásica, confeccionou e fechou estomas",niveis:[4]},
+    {id:"e",text:"Comunicou implicações do estoma ao paciente de forma autônoma e empática",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Conduziu discussão sobre indicação cirúrgica vs. conservadora com fundamentação",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Preparou paciente e família para mudanças corporais permanentes",niveis:[3,4]},
+  ]},
+  9:{title:"Doença Anorretal Benigna",itens:[
+    {id:"a",text:"Observou procedimentos e aprendeu anatomia proctológica",niveis:[1]},
+    {id:"b",text:"Drenou abscessos e realizou ligadura elástica sob supervisão direta",niveis:[2]},
+    {id:"c",text:"Realizou hemorroidectomia e fissurectomia com autonomia",niveis:[3]},
+    {id:"d",text:"Operou fístulas simples e prolapso retal, supervisionou R1",niveis:[4]},
+    {id:"e",text:"Realizou exame proctológico respeitando privacidade e explicando achados",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou o ambulatório e supervisionou R1 definindo critérios de referência",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Modelou relação respeitosa no exame de região íntima para juniores",niveis:[4]},
+  ]},
+  10:{title:"Cirurgia do Fígado, Vias Biliares e Hipertensão Portal",itens:[
+    {id:"a",text:"Participou como observador aprendendo anatomia hepatobiliar",niveis:[1]},
+    {id:"b",text:"Realizou biópsia hepática e drenou abscesso com supervisor ao lado",niveis:[2]},
+    {id:"c",text:"Executou hepatectomias atípicas com autonomia relativa",niveis:[3]},
+    {id:"d",text:"Reconheceu proativamente quando lesão supera o escopo do CG",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou hepatectomia atípica como cirurgião principal",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Modelou pedido de ajuda como decisão de alta competência para juniores",niveis:[4]},
+  ]},
+  11:{title:"Pancreatite Aguda Grave e Necrosante",itens:[
+    {id:"a",text:"Participou como segundo auxiliar sob supervisão total",niveis:[2]},
+    {id:"b",text:"Conduziu manejo clínico com supervisor de sobreaviso",niveis:[3]},
+    {id:"c",text:"Manejou pancreatite grave autonomamente encaminhando cirurgia eletiva para HPB",niveis:[4]},
+    {id:"d",text:"Coordenou manejo multidisciplinar (UTI, nutrição, radiologia intervencionista)",niveis:[3,4]},
+    {id:"e",text:"Conduziu conversa de prognóstico grave de forma autônoma e empática",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou manejo step-up e comunicou plano à família",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Integrou cuidados paliativos precocemente ao plano de tratamento",niveis:[4]},
+  ]},
+  12:{title:"Oncologia Cirúrgica — Princípios e Neoplasias Cutâneas",itens:[
+    {id:"a",text:"Excisou melanoma e CEC com margens conforme protocolo",niveis:[3]},
+    {id:"b",text:"Realizou esvaziamento superficial e biópsia de sentinela",niveis:[4]},
+    {id:"c",text:"Apresentou caso oncológico em tumor board com conduta fundamentada",niveis:[3,4]},
+    {id:"d",text:"Comunicou diagnóstico de câncer de forma estruturada e empática",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Conduziu apresentação de tumor board integrando diferentes especialidades",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Modelou comunicação de diagnóstico grave para residentes juniores",niveis:[4]},
+  ]},
+  13:{title:"Cirurgia do Cólon e Reto",itens:[
+    {id:"a",text:"Realizou hemicolectomia direita aberta com supervisor scrubado",niveis:[2]},
+    {id:"b",text:"Realizou hemicolectomia esquerda e sigmoidectomia com supervisor de sobreaviso",niveis:[3]},
+    {id:"c",text:"Operou ressecção anterior do reto, Hartmann e laparoscopia colorretal",niveis:[4]},
+    {id:"d",text:"Elaborou briefing antecipando pontos críticos (anastomose, proteção de estoma)",niveis:[3,4]},
+    {id:"e",text:"Discutiu indicação de cirurgia paliativa vs. cuidados de conforto",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou planejamento cirúrgico e conduziu debriefing pós-operatório",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Liderou decisão multidisciplinar em casos de neoplasia avançada",niveis:[4]},
+  ]},
+  14:{title:"Cirurgia do Esôfago e Estômago",itens:[
+    {id:"a",text:"Realizou gastrostomia e participou de gastrectomia com supervisor scrubado",niveis:[2]},
+    {id:"b",text:"Realizou gastrectomia distal com supervisão indireta",niveis:[3]},
+    {id:"c",text:"Operou gastrectomia total, fundoplicatura e esofagocardioplastia com autonomia",niveis:[4]},
+    {id:"d",text:"Verbalizou plano cirúrgico e mudanças de estratégia à equipe em tempo real",niveis:[3,4]},
+    {id:"e",text:"Conduziu análise de M&M diferenciando erro de sistema de erro individual",niveis:[4]},
+  ],lideranca:[
+    {id:"l1",text:"Ensinou anatomia e técnica ao R1/R2 durante o ato cirúrgico",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Notificou complicações graves proativamente com abertura à análise crítica",niveis:[3,4]},
+  ]},
+  15:{title:"Cirurgia do Trauma",itens:[
+    {id:"a",text:"Integrou equipe realizando procedimentos básicos, nunca liderou",niveis:[1]},
+    {id:"b",text:"Iniciou ressuscitação com supervisor ao lado",niveis:[2]},
+    {id:"c",text:"Coordenou abordagem inicial e realizou laparotomia de controle de dano",niveis:[3]},
+    {id:"d",text:"Liderou trauma room com briefing pré-chegada e debriefing formal pós-caso",niveis:[4]},
+    {id:"e",text:"Manteve consciência situacional com múltiplas variáveis simultâneas",niveis:[3,4]},
+    {id:"f",text:"Comunicou decisão crítica à família de forma direta e empática",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Usou linguagem de loop fechado e distribuiu tarefas claramente",niveis:[3,4]},
+    {id:"l2",text:"Fez briefing de 30 segundos antes da chegada do paciente",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Protegeu a dignidade do paciente e família em decisão de estresse extremo",niveis:[3,4]},
+  ]},
+  16:{title:"Infecção de Partes Moles e Fasciíte Necrosante",itens:[
+    {id:"a",text:"Reconheceu NSTI e ativou CC de forma autônoma com critério clínico claro",niveis:[3,4]},
+    {id:"b",text:"Realizou desbridamento com supervisor presente",niveis:[2]},
+    {id:"c",text:"Manejou Fournier e NSTI extensas, indicou cobertura",niveis:[4]},
+    {id:"d",text:"Explicou consequências do desbridamento e plano de reabilitação ao paciente",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou resposta ao NSTI coordenando CC, UTI e família simultaneamente",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Integrou cuidado psicológico desde o pré-operatório",niveis:[4]},
+  ]},
+  17:{title:"Cirurgia Endócrina — Tireoide, Paratireoide e Adrenal",itens:[
+    {id:"a",text:"Realizou tireoidectomia parcial com supervisor ao lado",niveis:[2]},
+    {id:"b",text:"Operou tireoide/paratireoide com autonomia pós-estágio",niveis:[3,4]},
+    {id:"c",text:"Verbalizou localização do nervo laríngeo recorrente antes de cortar",niveis:[2,3,4]},
+    {id:"d",text:"Conduziu discussão de indicação baseada em Bethesda e imagem de forma autônoma",niveis:[3,4]},
+    {id:"e",text:"Questionou indicações excessivas modelando decisão baseada em evidência",niveis:[4]},
+  ],lideranca:[
+    {id:"l1",text:"Usou a cirurgia como modelo de ensino de anatomia cervical",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Apresentou casos em reunião clínica questionando indicações com base em evidência",niveis:[4]},
+  ]},
+  18:{title:"Cirurgia Bariátrica e Metabólica — Bases e Participação",itens:[
+    {id:"a",text:"Participou de reunião multidisciplinar como observador",niveis:[2]},
+    {id:"b",text:"Contribuiu ativamente na reunião com perspectiva cirúrgica",niveis:[3]},
+    {id:"c",text:"Coordenou discussão multidisciplinar definindo papel de cada especialidade",niveis:[4]},
+    {id:"d",text:"Usou linguagem centrada na pessoa sem estigma em relação à obesidade",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Coordenou equipe multidisciplinar no pré e pós-operatório bariátrico",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Identificou e corrigiu linguagem estigmatizante na equipe sem julgamento",niveis:[4]},
+  ]},
+  19:{title:"Controle Cirúrgico de Hemorragia e Técnica Vascular Básica",itens:[
+    {id:"a",text:"Auxiliou em compressão e preparou fios vasculares sob supervisão constante",niveis:[1]},
+    {id:"b",text:"Realizou ligadura de vasos e sutura lateral com supervisor scrubado",niveis:[2]},
+    {id:"c",text:"Controlou hemorragia abdominal e realizou esplenectomia hemostática",niveis:[3]},
+    {id:"d",text:"Realizou controle de dano vascular completo (ligadura, rafia, shunt, packing)",niveis:[4]},
+    {id:"e",text:"Identificou quando lesão vascular supera o escopo do CG antes de complicar",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Liderou sequência controle–ressuscitação–re-exploração distribuindo tarefas",niveis:[4]},
+  ],prof:[
+    {id:"p1",text:"Modelou transferência para vascular como ato de competência, não fraqueza",niveis:[4]},
+  ]},
+  20:{title:"Manejo Cirúrgico da Cavidade Torácica",itens:[
+    {id:"a",text:"Realizou drenagem torácica por dissecção com supervisor ao lado",niveis:[1,2]},
+    {id:"b",text:"Participou de toracotomia exploradora como primeiro auxiliar",niveis:[2]},
+    {id:"c",text:"Realizou toracotomia exploradora em trauma com autonomia",niveis:[3]},
+    {id:"d",text:"Liderou toracotomia de urgência e realizou janela pericárdica",niveis:[4]},
+    {id:"e",text:"Confirmou expansão pulmonar, posição do dreno e hemostasia antes de fechar",niveis:[3,4]},
+  ],lideranca:[
+    {id:"l1",text:"Decidiu e executou toracotomia de urgência comunicando raciocínio à equipe",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Ensinou fechamento sistemático do tórax analisando complicações como aprendizado",niveis:[4]},
+  ]},
+  21:{title:"Urologia — Procedimentos Essenciais e Urgências Urológicas",itens:[
+    {id:"a",text:"Realizou cateterismo vesical com supervisor presente",niveis:[1,2]},
+    {id:"b",text:"Realizou cistostomia e suturou laceração vesical com orientação",niveis:[2]},
+    {id:"c",text:"Diagnosticou e tratou urgências urológicas prevalentes de forma autônoma",niveis:[3]},
+    {id:"d",text:"Identificou e protegeu ureteres de forma autônoma em colectomias",niveis:[3,4]},
+    {id:"e",text:"Supervisionou R1 no estágio de urologia ensinando critérios de acionamento",niveis:[4]},
+  ],lideranca:[
+    {id:"l1",text:"Diagnosticou urgência urológica e acionou especialista com informação estruturada",niveis:[3,4]},
+  ],prof:[
+    {id:"p1",text:"Documentou identificação dos ureteres no relato operatório como rotina",niveis:[3,4]},
+  ]},
+};
+
+const NV_COLORS = {
+  N1:{bg:"#FCEBEB",border:"#F09595",txt:"N1 — Participação Limitada"},
+  N2:{bg:"#FAEEDA",border:"#EF9F27",txt:"N2 — Supervisão Direta"},
+  N3:{bg:"#EAF3DE",border:"#97C459",txt:"N3 — Supervisão Indireta"},
+  N4:{bg:"#E6F1FB",border:"#85B7EB",txt:"N4 — Pronto para a Prática"},
+};
+
+let _nivelConfirmado = null;
+
+function calcularNivelSugerido(checkedIds, epaNum) {
+  const epa = EPA_CHECKLISTS[epaNum];
+  if (!epa) return null;
+  const scores = {1:0,2:0,3:0,4:0};
+  const allItens = [...epa.itens,...(epa.lideranca||[]),...(epa.prof||[])];
+  allItens.forEach(item => {
+    if (checkedIds.includes(item.id)) {
+      item.niveis.forEach(n => { scores[n] += 1; });
+    }
+  });
+  const weighted = {1:scores[1]*1,2:scores[2]*2,3:scores[3]*3,4:scores[4]*4};
+  const max = Math.max(...Object.values(weighted));
+  if (max === 0) return null;
+  const n = parseInt(Object.entries(weighted).find(([,v])=>v===max)[0]);
+  return `N${n}`;
+}
+
+function renderCheckItem(item) {
+  return `<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;
+    cursor:pointer;font-size:13px;line-height:1.5;width:100%;box-sizing:border-box;
+    padding-right:4px">
+    <input type="checkbox" id="chk-${item.id}" value="${item.id}"
+      onchange="onCheckChange()"
+      style="margin-top:3px;flex-shrink:0;width:15px;height:15px;cursor:pointer">
+    <span style="flex:1;min-width:0;word-wrap:break-word">${item.text}</span>
+  </label>`;
+}
+
+function loadChecklist() {
+  const epaNum = parseInt(document.getElementById('av-epa').value);
+  const epa = EPA_CHECKLISTS[epaNum];
+  resetChecklist();
+  if (!epa) return;
+  document.getElementById('checklist-area').style.display = 'block';
+  document.getElementById('checklist-placeholder').style.display = 'none';
+  document.getElementById('chk-itens').innerHTML = epa.itens.map(renderCheckItem).join('');
+  document.getElementById('chk-lideranca').innerHTML = (epa.lideranca||[]).map(renderCheckItem).join('');
+  document.getElementById('chk-prof').innerHTML = (epa.prof||[]).map(renderCheckItem).join('');
+}
+
+function resetChecklist() {
+  _nivelConfirmado = null;
+  document.getElementById('checklist-area').style.display = 'none';
+  document.getElementById('checklist-placeholder').style.display = 'block';
+  document.getElementById('nivel-sugerido-box').style.display = 'none';
+  document.getElementById('nivel-confirmado').style.display = 'none';
+  document.getElementById('av-forte').value = '';
+  document.getElementById('av-dev').value = '';
+  document.getElementById('av-trans').value = '';
+  ['btn-n1','btn-n2','btn-n3','btn-n4'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.style.fontWeight=''; b.style.borderColor=''; }
+  });
+}
+
+function getCheckedIds() {
+  return Array.from(document.querySelectorAll('#checklist-area input[type=checkbox]:checked'))
+    .map(cb => cb.value);
+}
+
+function onCheckChange() {
+  const epaNum = parseInt(document.getElementById('av-epa').value);
+  const checkedIds = getCheckedIds();
+  const sugerido = calcularNivelSugerido(checkedIds, epaNum);
+  const box = document.getElementById('nivel-sugerido-box');
+
+  if (!sugerido || checkedIds.length === 0) {
+    box.style.display = 'none';
+    return;
+  }
+
+  const nv = NV_COLORS[sugerido];
+  box.style.display = 'block';
+  box.style.background = nv.bg;
+  box.style.borderColor = nv.border;
+  document.getElementById('nivel-sugerido-txt').textContent =
+    `Nível sugerido com base nos comportamentos marcados: ${nv.txt}`;
+
+  // Highlight suggested button
+  ['N1','N2','N3','N4'].forEach(n => {
+    const b = document.getElementById('btn-'+n.toLowerCase());
+    if (b) {
+      b.style.fontWeight = n === sugerido ? '700' : '';
+      b.style.borderColor = n === sugerido ? NV_COLORS[n].border : '';
+      b.style.background = n === sugerido ? NV_COLORS[n].bg : '';
+    }
+  });
+
+  // Auto-fill text fields from checked items
+  const epa = EPA_CHECKLISTS[epaNum];
+  if (!epa) return;
+  const allItens = [...epa.itens,...(epa.lideranca||[]),...(epa.prof||[])];
+  const checked = allItens.filter(i => checkedIds.includes(i.id));
+  const higherNiveis = checked.filter(i => i.niveis.some(n => n >= 3));
+  const lowerNiveis  = checked.filter(i => i.niveis.every(n => n <= 2));
+  if (higherNiveis.length)
+    document.getElementById('av-forte').value =
+      higherNiveis.slice(0,2).map(i=>i.text).join('; ');
+  if (lowerNiveis.length)
+    document.getElementById('av-dev').value =
+      lowerNiveis.slice(0,2).map(i=>i.text).join('; ');
+}
+
+function confirmarNivel(nivel) {
+  _nivelConfirmado = nivel;
+  const nv = NV_COLORS[nivel];
+  const el = document.getElementById('nivel-confirmado');
+  el.style.display = 'block';
+  el.style.color = nv.border;
+  el.textContent = `✓ Nível confirmado: ${nv.txt}`;
+  // Bold the confirmed button
+  ['N1','N2','N3','N4'].forEach(n => {
+    const b = document.getElementById('btn-'+n.toLowerCase());
+    if (b) {
+      b.style.fontWeight = n === nivel ? '700' : '400';
+      b.style.background = n === nivel ? nv.bg : '';
+      b.style.borderColor = n === nivel ? nv.border : '';
+    }
+  });
+}
+
 // ── SELECTS ───────────────────────────────────────────────────────────────────
 function fillAvSelects(){
   document.getElementById('av-res').innerHTML=
@@ -727,22 +1129,24 @@ function fillHistSelects(){
 
 // ── AVALIAÇÕES ────────────────────────────────────────────────────────────────
 async function salvarAv(){
-  const rId=document.getElementById('av-res').value;
-  const nv=document.getElementById('av-nv').value;
-  if(!rId){status('Selecione um residente','err');return;}
-  if(!nv){status('Selecione o nível de entrustment','err');return;}
-  const r=S.residents.find(x=>x.id===rId);
-  const av={
-    id:'a'+Date.now(), rId,
-    epaNum:parseInt(document.getElementById('av-epa').value),
-    nivel:nv, fase:document.getElementById('av-fase').value,
-    tipo:document.getElementById('av-tipo').value,
-    ctx:document.getElementById('av-ctx').value.trim(),
-    forte:document.getElementById('av-forte').value.trim(),
-    dev:document.getElementById('av-dev').value.trim(),
-    trans:document.getElementById('av-trans').value.trim(),
-    data:new Date().toLocaleDateString('pt-BR'),
-    prec:r?.prec||'', synced:false
+  const rId = document.getElementById('av-res').value;
+  const nv  = _nivelConfirmado;
+  if (!rId) { status('Selecione um residente','err'); return; }
+  if (!nv)  { status('Marque os comportamentos e confirme o nível','err'); return; }
+  const r = S.residents.find(x=>x.id===rId);
+  const av = {
+    id:       'a'+Date.now(), rId,
+    epaNum:   parseInt(document.getElementById('av-epa').value),
+    nivel:    nv,
+    fase:     document.getElementById('av-fase').value,
+    tipo:     document.getElementById('av-tipo').value,
+    ctx:      document.getElementById('av-ctx').value.trim(),
+    forte:    document.getElementById('av-forte').value.trim(),
+    dev:      document.getElementById('av-dev').value.trim(),
+    trans:    document.getElementById('av-trans').value.trim(),
+    checklist: getCheckedIds(),
+    data:     new Date().toLocaleDateString('pt-BR'),
+    prec:     r?.prec||'', synced:false
   };
   S.avaliacoes.push(av);
   saveState(); render(); limparAv();
@@ -755,12 +1159,14 @@ async function salvarAv(){
     , ok?'ok':'info');
     render();
   } else {
-    status(`Salvo localmente — ${r.nome} · EPA ${av.epaNum} · ${av.nivel} (configure o Sheets para sincronizar)`);
+    status(`Avaliação salva — ${r.nome} · EPA ${av.epaNum} · ${av.nivel}`);
   }
 }
 function limparAv(){
-  ['av-ctx','av-forte','av-dev','av-trans'].forEach(id=>{document.getElementById(id).value='';});
-  document.getElementById('av-nv').selectedIndex=0;
+  resetChecklist();
+  ['av-ctx','av-forte','av-dev','av-trans'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
 }
 function renderHist(){
   const rId=document.getElementById('hist-res')?.value||'todos';
