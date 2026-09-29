@@ -163,7 +163,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
   </div>
   <div class="ff">
     <label>Contexto clínico observado</label>
-    <input type="text" id="av-ctx" placeholder="Ex.: colecistectomia laparoscópica por colecistite aguda grau II">
+    <input type="text" id="av-ctx" maxlength="2000" placeholder="Ex.: colecistectomia laparoscópica por colecistite aguda grau II">
   </div>
 
   <!-- Step 2: Behavioral checklist -->
@@ -200,15 +200,15 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
     <!-- Step 4: Free text (pre-filled from checklist) -->
     <div class="frow">
       <div><label>Ponto forte observado</label>
-        <textarea id="av-forte" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
+        <textarea id="av-forte" maxlength="2000" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
       </div>
       <div><label>Área de desenvolvimento</label>
-        <textarea id="av-dev" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
+        <textarea id="av-dev" maxlength="2000" placeholder="Preenchido automaticamente a partir do checklist..."></textarea>
       </div>
     </div>
     <div class="ff">
       <label>Observação adicional (opcional)</label>
-      <textarea id="av-trans" placeholder="Contexto adicional não coberto pelo checklist..." style="min-height:48px"></textarea>
+      <textarea id="av-trans" maxlength="2000" placeholder="Contexto adicional não coberto pelo checklist..." style="min-height:48px"></textarea>
     </div>
 
     <div class="brow">
@@ -379,7 +379,12 @@ const SK='prmcg-epa-v2', CK='prmcg-cfg-v2';
 const CFG_DEFAULT = {
   sheetId: '1Z3QISaCFGvq3L5loJA1b-3LfwOMpVb9Jr-MVx6iLUj0',
   url:     'https://script.google.com/macros/s/AKfycbxWSh4k6aXphZdRT2vpHUn6qpRAaICQiFV8C1bGeedjVpHR35lPb7RvGlJMGz16UIIG/exec',
-  tab:     'Avaliações'
+  tab:     'Avaliações',
+  // Token do painel (Apps Script > Propriedades do script > TOKEN_PAINEL).
+  // ATENÇÃO: em página pública este valor também é público — proteção fraca
+  // (barra abuso casual e permite revogar). Solução real: hospedar em local privado.
+  // É lido direto de CFG_DEFAULT (não do localStorage), para que a troca valha já.
+  token:   'OEddJ2k9ARoTTM8gzu-sD_FALze6HgRn7fQI8MUtgj0'
 };
 
 let S={residents:[],avaliacoes:[]};
@@ -461,26 +466,56 @@ function avToRow(a){
     a.ctx||'',a.forte||'',a.dev||'',a.trans||'',a.prec||r?.prec||''];
 }
 
+// Limites do Apps Script (Code.gs): até 200 linhas por POST e 2000 caracteres por célula.
+const MAX_LINHAS_POST = 200;
+const MAX_CHARS_CELULA = 2000;
+
+// POST text/plain SEM 'no-cors' (continua "simple request", sem preflight): o
+// Apps Script responde com Access-Control-Allow-Origin: *, então a resposta
+// pode ser lida. Devolve o JSON do Apps Script; lança erro se não vier JSON.
 async function postToSheets(rows){
   if(!CFG.url) throw new Error('URL do Apps Script não configurada');
-  // Send as plain text body to avoid CORS preflight (no-cors + text/plain = simple request)
-  // Apps Script reads via e.postData.contents
-  const payload = JSON.stringify({rows: rows, tab: CFG.tab});
-  const resp = await fetch(CFG.url, {
-    method: 'POST',
-    body:   payload,
-    mode:   'no-cors'
-  });
-  return true;
+  const payload = JSON.stringify({token: CFG_DEFAULT.token, rows: rows, tab: CFG.tab});
+  const resp = await fetch(CFG.url, {method: 'POST', body: payload});
+  if(!resp.ok) throw new Error('HTTP '+resp.status);
+  return await resp.json();
+}
+
+// Envia `avs` em lotes de até MAX_LINHAS_POST. Uma avaliação só vira
+// "sincronizada" se o Apps Script respondeu ok E o resultado DAQUELA linha é ok.
+// Devolve {enviadas, recusadas, erro}; recusadas/erro ficam pendentes.
+async function enviarLotes(avs){
+  let enviadas=0, recusadas=0, erro='';
+  for(let i=0;i<avs.length;i+=MAX_LINHAS_POST){
+    const lote=avs.slice(i,i+MAX_LINHAS_POST);
+    let r;
+    try{ r=await postToSheets(lote.map(avToRow)); }
+    catch(e){ erro=e.message; break; }
+    if(!r || r.ok!==true){ erro=(r&&r.erro)||'resposta inválida'; break; }
+    if(!Array.isArray(r.resultados)){
+      // Apps Script ANTIGO (antes da troca): responde só {ok:true, n} e grava tudo.
+      if(r.n===lote.length){ lote.forEach(av=>{av.synced=true;}); enviadas+=lote.length; saveState(); continue; }
+      erro='resposta inválida'; break;
+    }
+    lote.forEach((av,j)=>{
+      const res=r.resultados[j];
+      if(res && res.ok===true){ av.synced=true; enviadas++; }
+      else { recusadas++; addLog(`Recusada pelo Sheets (${(res&&res.motivo)||'?'}): EPA ${av.epaNum} · ${av.data}`,false); }
+    });
+    saveState();
+  }
+  return {enviadas, recusadas, erro};
 }
 
 async function syncOne(av){
-  try{
-    await postToSheets([avToRow(av)]);
-    av.synced=true; saveState(); updatePill();
-    addLog(`Sincronizado: ${S.residents.find(r=>r.id===av.rId)?.nome||'?'} · EPA ${av.epaNum} · ${av.nivel}`);
+  const r=await enviarLotes([av]);
+  updatePill();
+  if(r.enviadas){
+    addLog(`Sincronizado: ${S.residents.find(x=>x.id===av.rId)?.nome||'?'} · EPA ${av.epaNum} · ${av.nivel}`);
     return true;
-  }catch(e){ addLog('Erro: '+e.message,false); return false; }
+  }
+  if(r.erro) addLog('Erro: '+r.erro,false);
+  return false;
 }
 
 async function syncAgora(){
@@ -494,16 +529,14 @@ async function syncAgora(){
   pill.className='sync-pill syncing'; dot.className='sync-dot dot-sync';
   txt.textContent='Sincronizando...';
   status(`Enviando ${pending.length} avaliação(ões) ao Sheets...`,'info');
-  try{
-    await postToSheets(pending.map(avToRow));
-    pending.forEach(a=>{a.synced=true;});
-    saveState(); updatePill(); render();
-    addLog(`${pending.length} avaliação(ões) sincronizada(s)`);
-    status(`✓ ${pending.length} avaliação(ões) enviada(s) ao Sheets`);
-  }catch(e){
-    updatePill();
-    addLog('Erro no envio em lote: '+e.message,false);
-    status('Erro na sincronização — verifique o log','err');
+  const r=await enviarLotes(pending);
+  updatePill(); render();
+  if(r.enviadas) addLog(`${r.enviadas} avaliação(ões) sincronizada(s)`);
+  if(r.erro) addLog('Erro no envio em lote: '+r.erro,false);
+  if(!r.erro && !r.recusadas){
+    status(`✓ ${r.enviadas} avaliação(ões) enviada(s) ao Sheets`);
+  } else {
+    status(`${r.enviadas} enviada(s); ${pending.length-r.enviadas} continua(m) pendente(s) — verifique o log`,'err');
   }
 }
 
@@ -511,16 +544,14 @@ async function testar(){
   if(!CFG.url){status('Informe a URL do Apps Script','err');return;}
   status('Testando...','info');
   try{
-    // GET request — Apps Script doGet returns JSON, but no-cors blocks reading
-    // Use a proxy-free approach: just try a POST with empty rows
-    const payload = JSON.stringify({rows: [], tab: CFG.tab});
-    await fetch(CFG.url, {method:'POST', body:payload, mode:'no-cors'});
-    addLog('Conexão OK — URL válida e acessível');
+    const r=await postToSheets([]);
+    if(!r || r.ok!==true) throw new Error((r&&r.erro)||'resposta inválida');
+    addLog('Conexão OK — URL e token aceitos');
     status('✓ Conexão com o Apps Script estabelecida');
     renderCfgPanel();
   }catch(e){
     addLog('Falha na conexão: '+e.message,false);
-    status('Falha na conexão — verifique a URL','err');
+    status('Falha na conexão — verifique a URL (e o token)','err');
   }
 }
 
@@ -1140,10 +1171,10 @@ async function salvarAv(){
     nivel:    nv,
     fase:     document.getElementById('av-fase').value,
     tipo:     document.getElementById('av-tipo').value,
-    ctx:      document.getElementById('av-ctx').value.trim(),
-    forte:    document.getElementById('av-forte').value.trim(),
-    dev:      document.getElementById('av-dev').value.trim(),
-    trans:    document.getElementById('av-trans').value.trim(),
+    ctx:      document.getElementById('av-ctx').value.trim().slice(0,MAX_CHARS_CELULA),
+    forte:    document.getElementById('av-forte').value.trim().slice(0,MAX_CHARS_CELULA),
+    dev:      document.getElementById('av-dev').value.trim().slice(0,MAX_CHARS_CELULA),
+    trans:    document.getElementById('av-trans').value.trim().slice(0,MAX_CHARS_CELULA),
     checklist: getCheckedIds(),
     data:     new Date().toLocaleDateString('pt-BR'),
     prec:     r?.prec||'', synced:false
