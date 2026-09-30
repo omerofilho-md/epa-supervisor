@@ -957,7 +957,8 @@ function onCheckChange() {
   // Auto-fill text fields from checked items
   const epa = EPA_CHECKLISTS[epaNum];
   if (!epa) return;
-  const allItens = [...epa.itens,...(epa.lideranca||[]),...(epa.prof||[])];
+  // Só os itens transversais: as linhas técnicas (Expectativa HMAPA) descrevem o nível, não o residente.
+  const allItens = [...(epa.lideranca||[]),...(epa.prof||[])];
   const checked = allItens.filter(i => checkedIds.includes(i.id));
   const higherNiveis = checked.filter(i => i.niveis.some(n => n >= 3));
   const lowerNiveis  = checked.filter(i => i.niveis.every(n => n <= 2));
@@ -1013,6 +1014,10 @@ async function salvarAv(){
   const nv  = _nivelConfirmado;
   if (!rId) { status('Selecione um residente','err'); return; }
   if (!nv)  { status('Marque os comportamentos e confirme o nível','err'); return; }
+  const ativ = document.getElementById('av-ativ').value;
+  if (!ativ) { status('Selecione a atividade observada (ou «Outro»)','err'); return; }
+  if (ativ === '__outro' && !document.getElementById('av-ctx').value.trim())
+    { status('«Outro»: descreva a atividade no Contexto','err'); return; }
   const r = S.residents.find(x=>x.id===rId);
   const av = {
     id:       'a'+Date.now(), rId,
@@ -1025,6 +1030,7 @@ async function salvarAv(){
     dev:      document.getElementById('av-dev').value.trim().slice(0,MAX_CHARS_CELULA),
     trans:    document.getElementById('av-trans').value.trim().slice(0,MAX_CHARS_CELULA),
     checklist: getCheckedIds(),
+    catVer:   'v5',   // versão do catálogo do checklist/atividade (só local)
     data:     new Date().toLocaleDateString('pt-BR'),
     prec:     r?.prec||'', synced:false
   };
