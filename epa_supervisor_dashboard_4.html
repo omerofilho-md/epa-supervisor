@@ -797,6 +797,7 @@ const EPA_CHECKLISTS = Object.fromEntries(Object.entries(CATALOGO_V5).map(([n,e]
 // fase; as demais fases mostram todas as atividades da EPA; sempre há "Outro".
 const FASE_FUNCOES = {'Pré-operatório':'pre','Intraoperatório':'intra','Pós-operatório':'pos'};
 const ATIV_OUTRO = 'Outro (descrever)';
+const ATIV_PREFIXO_OUTRO = 'Outro: ';
 function atividadesV5(epaNum, fase){
   const f = CATALOGO_V5[epaNum]?.funcoes;
   if (!f) return [];
@@ -1025,7 +1026,9 @@ async function salvarAv(){
     nivel:    nv,
     fase:     document.getElementById('av-fase').value,
     tipo:     document.getElementById('av-tipo').value,
-    ctx:      document.getElementById('av-ctx').value.trim().slice(0,MAX_CHARS_CELULA),
+    // "Outro: " separa o texto livre (risco de dado de paciente) do catálogo — igual ao bot (Omero, 29/09).
+    ctx:      ((ativ === '__outro' && !/^Outro:/.test(document.getElementById('av-ctx').value.trim()) ? ATIV_PREFIXO_OUTRO : '')
+               + document.getElementById('av-ctx').value.trim()).slice(0,MAX_CHARS_CELULA),
     forte:    document.getElementById('av-forte').value.trim().slice(0,MAX_CHARS_CELULA),
     dev:      document.getElementById('av-dev').value.trim().slice(0,MAX_CHARS_CELULA),
     trans:    document.getElementById('av-trans').value.trim().slice(0,MAX_CHARS_CELULA),
