@@ -409,8 +409,30 @@ function loadState(){
   render();
 }
 function saveState(){
-  localStorage.setItem(SK,JSON.stringify(S));
-  localStorage.setItem(CK,JSON.stringify(CFG));
+  try{
+    localStorage.setItem(SK,JSON.stringify(S));
+    localStorage.setItem(CK,JSON.stringify(CFG));
+  }catch(e){ avisoArmazenamento(); }
+}
+// Navegador dentro do Telegram/WhatsApp, navegação privada ou Safari com
+// "Bloquear todos os cookies" não guardam (ou apagam) o localStorage: o painel
+// funciona só na memória e perde tudo ao recarregar. Avisar de forma visível.
+function armazenamentoOk(){
+  try{
+    const k='__teste_epa'; localStorage.setItem(k,'1');
+    const ok=localStorage.getItem(k)==='1'; localStorage.removeItem(k); return ok;
+  }catch(e){ return false; }
+}
+function avisoArmazenamento(){
+  if(document.getElementById('aviso-armaz'))return;
+  const d=document.createElement('div');
+  d.id='aviso-armaz';
+  d.style.cssText='position:sticky;top:0;z-index:9999;background:#FCEBEB;color:#791F1F;border-bottom:2px solid #F09595;padding:10px 14px;font-size:13px;line-height:1.4';
+  d.innerHTML='<strong>⚠ Este navegador não está guardando os dados do painel.</strong> '
+    +'O que não estiver com “✓ Sheets” se perde ao recarregar. Abra o link no <strong>Safari</strong> '
+    +'(não dentro do Telegram ou WhatsApp), fora da navegação privada, e desligue '
+    +'Ajustes → Safari → Bloquear Todos os Cookies. Antes de sair, toque em “Sincronizar pendentes agora”.';
+  document.body.prepend(d);
 }
 function saveCfg(){
   CFG.sheetId = document.getElementById('cfg-sheet-id').value.trim();
@@ -1287,6 +1309,9 @@ function resetTudo(){
 }
 
 loadState();
+if(!armazenamentoOk()) avisoArmazenamento();
+// Pede ao navegador para não apagar os dados por falta de espaço ou inatividade.
+try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
 </script>
 </body>
 </html>
