@@ -307,6 +307,7 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue);bo
   <div class="lbl">Dados locais</div>
   <div class="brow" style="margin-top:0">
     <button class="btn btn-sm" onclick="expBackup()">Exportar backup JSON</button>
+    <button class="btn btn-sm" onclick="copBackup()">Copiar backup JSON</button>
     <button class="btn btn-sm" onclick="showImport()">Importar backup JSON</button>
     <button class="btn btn-sm btn-d" onclick="resetTudo()">Limpar todos os dados</button>
   </div>
@@ -1231,11 +1232,36 @@ function renderHist(){
 }
 
 // ── BACKUP ────────────────────────────────────────────────────────────────────
-function expBackup(){
+// iPhone/iPad: o Safari não baixa link data: e navegadores dentro de apps
+// (Telegram, WhatsApp) não baixam nada. Ordem: folha de compartilhamento do
+// sistema ("Salvar em Arquivos", AirDrop, e-mail) → download por Blob → copiar.
+async function expBackup(){
+  const txt=JSON.stringify(S,null,2);
+  const nome=`epa-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const file=new File([txt],nome,{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:nome}); addLog('Backup JSON exportado'); return; }
+    catch(e){ if(e.name==='AbortError')return; }
+  }
+  const url=URL.createObjectURL(file);
   const a=document.createElement('a');
-  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S,null,2));
-  a.download=`epa-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); addLog('Backup JSON exportado');
+  a.href=url; a.download=nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  addLog('Backup JSON exportado');
+  status('Se o arquivo não aparecer (iPhone ou navegador do Telegram), use "Copiar backup JSON"');
+}
+function copBackup(){
+  const txt=JSON.stringify(S,null,2);
+  navigator.clipboard.writeText(txt)
+    .then(()=>status('Backup copiado — cole em Notas, e-mail ou mensagem privada'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=txt; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      status('Backup copiado — cole em Notas, e-mail ou mensagem privada');
+    });
+  addLog('Backup JSON copiado');
 }
 function showImport(){
   document.getElementById('import-area').style.display='';
